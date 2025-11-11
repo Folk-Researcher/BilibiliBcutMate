@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 # 定义项目文件的路径
-BCUT_PROJECT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'bcut_project_file.bjson')
+BCUT_PROJECT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '22-57-16-88--{1c3e00f7-3b2a-4f38-be41-b26bac083b04}.bjson')
 
 @app.route('/api', methods=['POST'])
 def handle_api_request():
@@ -48,8 +48,18 @@ def add_caption(params):
         with open(BCUT_PROJECT_FILE, 'r', encoding='utf-8') as f:
             project_data = json.load(f)
 
-        # 定位到字幕轨道
-        caption_track = project_data['timelineWidget']['timeline']['captionTracks'][0]
+        # 定位到字幕轨道，如果不存在则创建一个
+        caption_tracks = project_data['timelineWidget']['timeline']['captionTracks']
+        if not caption_tracks:
+            # 创建一个新的字幕轨道
+            new_track = {
+                "captions": [],
+                "idString": str(int(time.time() * 1000)),
+                "index": 0,
+                "trackType": 5  # 假设 5 是字幕轨道的类型
+            }
+            caption_tracks.append(new_track)
+        caption_track = caption_tracks[0]
         captions = caption_track['captions']
 
         # 创建新的字幕对象
@@ -107,7 +117,7 @@ def get_project_info(params):
         
         captions = []
         caption_tracks = project_data.get('timelineWidget', {}).get('timeline', {}).get('captionTracks', [])
-        if caption_tracks:
+        if caption_tracks and len(caption_tracks) > 0:
             captions = caption_tracks[0].get('captions', [])
 
         project_info = {
@@ -143,7 +153,7 @@ def update_caption(params):
 
         caption_found = False
         caption_tracks = project_data.get('timelineWidget', {}).get('timeline', {}).get('captionTracks', [])
-        if caption_tracks:
+        if caption_tracks and len(caption_tracks) > 0:
             for caption in caption_tracks[0].get('captions', []):
                 if caption.get('idString') == caption_id:
                     if 'text' in updates:
@@ -188,7 +198,7 @@ def delete_caption(params):
 
         caption_found = False
         caption_tracks = project_data.get('timelineWidget', {}).get('timeline', {}).get('captionTracks', [])
-        if caption_tracks:
+        if caption_tracks and len(caption_tracks) > 0:
             captions = caption_tracks[0].get('captions', [])
             caption_to_remove = None
             for caption in captions:
