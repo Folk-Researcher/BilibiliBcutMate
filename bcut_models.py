@@ -23,6 +23,24 @@ class AssetInfo(BaseModel):
     realMaterialId: str
     type: int
 
+    # Extended fields observed in detailed caption assets
+    audioType: Optional[int] = None
+    coverPath: Optional[str] = None
+    customInfos: Optional[Dict[str, Any]] = None
+    displayName: Optional[str] = None
+    frameRateDen: Optional[int] = None
+    frameRateNum: Optional[int] = None
+    height: Optional[int] = None
+    itemName: Optional[str] = None
+    originDuration: Optional[int] = None
+    originSrcPath: Optional[str] = None
+    originType: Optional[int] = None
+    shotClipId: Optional[str] = None
+    shotIndex: Optional[int] = None
+    srcPath: Optional[str] = None
+    videoType: Optional[int] = None
+    width: Optional[int] = None
+
     model_config = ConfigDict(extra="allow")
 
 
@@ -44,6 +62,35 @@ class Caption(BaseModel):
     textAlignment: Optional[int] = None
     textColor: Optional[RGBA] = None
 
+    # Extended caption properties
+    drawBackgroundColor: Optional[bool] = None
+    drawOutline: Optional[bool] = None
+    drawShadowColor: Optional[bool] = None
+    fancyWordId: Optional[str] = None
+    fancyWordPath: Optional[str] = None
+    fontId: Optional[str] = None
+    fontName: Optional[str] = None
+    inAnimationDuration: Optional[int] = None
+    inAnimationId: Optional[str] = None
+    inAnimationPath: Optional[str] = None
+    isVerticalLayout: Optional[bool] = None
+    letterSpacing: Optional[int] = None
+    lineSpacing: Optional[int] = None
+    loopAnimationDuration: Optional[int] = None
+    loopAnimationId: Optional[str] = None
+    loopAnimationPath: Optional[str] = None
+    outAnimationDuration: Optional[int] = None
+    outAnimationId: Optional[str] = None
+    outAnimationPath: Optional[str] = None
+    rotation: Optional[float] = None
+    transX: Optional[int] = None
+    transY: Optional[int] = None
+    underline: Optional[bool] = None
+    textBold: Optional[bool] = None
+    textItalic: Optional[bool] = None
+    templateId: Optional[str] = None
+    templatePackagePath: Optional[str] = None
+
     model_config = ConfigDict(extra="allow")
 
 
@@ -52,6 +99,7 @@ class CaptionTrack(BaseModel):
     idString: Optional[str] = None
     index: Optional[int] = None
     trackType: Optional[int] = None
+    compacted: Optional[bool] = None
 
     model_config = ConfigDict(extra="allow")
 
