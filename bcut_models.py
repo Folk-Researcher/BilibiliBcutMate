@@ -238,6 +238,60 @@ def save_bcut_project(project: "BcutProject", out_path: str | Path) -> Path:
     return out_p
 
 
+def create_empty_project(
+    width: int = 1920,
+    height: int = 1080,
+    fps_num: int = 30,
+    fps_den: int = 1,
+    sample_rate: int = 48000,
+    channel_count: int = 2,
+    draft_version: str = "3.11.8",
+) -> "BcutProject":
+    """创建一个空的 Bcut 工程对象（不写盘）。
+
+    参数：
+    - width/height: 分辨率（像素）
+    - fps_num/fps_den: 帧率分子/分母
+    - sample_rate/channel_count: 音频采样率与声道数
+    - draft_version: 草稿创建版本字符串
+
+    返回：
+    - BcutProject: 可直接用于保存为 `.bjson` 的工程对象
+    """
+    config = TimelineConfig(
+        audioRes=AudioRes(channelCount=channel_count, sampleRate=sample_rate),
+        videoFps=VideoFps(den=fps_den, num=fps_num),
+        videoRes=VideoRes(height=height, width=width),
+    )
+    timeline = Timeline(
+        adjustTracks=[],
+        audioTracks=[],
+        captionTracks=[],
+        config=config,
+        filterTracks=[],
+        idString=str(uuid4()),
+        stickerTracks=[],
+        timelineVideoFxTracks=[],
+        videoTracks=[],
+    )
+    widget = TimelineWidget(
+        linkage=True,
+        linkageDelegate={},
+        magnet=True,
+        ruler=Ruler(MarkPointInfo=[]),
+        timeline=timeline,
+        tracking={},
+        tts={},
+        ttv=Ttv(enableDetach=False, is_set_bgm=False),
+    )
+    main = MainWindow(browserPanelFiles=[])
+    return BcutProject(
+        draftCreatedVersion=draft_version,
+        mainWindow=main,
+        timelineWidget=widget,
+    )
+
+
 class AudioRes(BaseModel):
     """时间线配置中的音频参数。"""
     channelCount: int  # 声道数（如 2=立体声）
@@ -407,6 +461,8 @@ __all__ = [
     "MainWindow",
     "Ttv",
     "BcutProject",
+    "create_empty_project",
+    "save_bcut_project",
     "load_bcut_project",
     "summarize_project",
 ]

@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from datetime import datetime
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
+from bcut_models import BcutProject, create_empty_project, save_bcut_project
 
 
 class WorkInfo(BaseModel):
@@ -149,6 +152,99 @@ def build_drafts_index(base_dir: str | Path) -> List[Dict[str, Any]]:
     return summaries
 
 
+def create_draft(
+    base_dir: str | Path,
+    name: str,
+    width: int = 1920,
+    height: int = 1080,
+    fps_num: int = 30,
+    fps_den: int = 1,
+    sample_rate: int = 48000,
+    channel_count: int = 2,
+    draft_version: str = "3.11.8",
+) -> Dict[str, Any]:
+    """创建一个新的草稿目录与空 `.bjson` 工程文件，并更新 `draftInfo.json`。
+
+    - base_dir: `Bcut Drafts` 根目录路径。
+    - name: 草稿名称（写入 `draftInfo.json`）。
+    - 其余参数：分辨率/帧率/音频配置与草稿版本。
+
+    返回：
+    - dict: `{ draft_id, folder, bjson }`，分别为目录 UUID、目录路径、创建的 `.bjson` 路径。
+    """
+    base = Path(base_dir)
+    base.mkdir(parents=True, exist_ok=True)
+
+    # 生成草稿目录 UUID（与示例一致采用大写）
+    draft_id = str(uuid4()).upper()
+    folder = base / draft_id
+    folder.mkdir(parents=True, exist_ok=True)
+
+    # 构建空工程对象
+    project: BcutProject = create_empty_project(
+        width=width,
+        height=height,
+        fps_num=fps_num,
+        fps_den=fps_den,
+        sample_rate=sample_rate,
+        channel_count=channel_count,
+        draft_version=draft_version,
+    )
+
+    # 生成文件名：HH-MM-SS-sss--{GUID}.bjson
+    now = datetime.now()
+    ms = int(now.microsecond / 1000)
+    file_guid = uuid4()
+    filename = f"{now:%H}-{now:%M}-{now:%S}-{ms:03d}--{{{file_guid}}}.bjson"
+    bjson_path = folder / filename
+
+    # 写入 .bjson（紧凑单行）
+    save_bcut_project(project, bjson_path)
+
+    # 更新/创建 draftInfo.json
+    draft_info_path = base / "draftInfo.json"
+    entry = DraftInfoEntry(
+        cloud_draft_id="",
+        cloud_draft_version="",
+        duration=0,
+        id=draft_id,
+        modifyTime=int(now.timestamp() * 1000),
+        name=name,
+        storyLineId="",
+        video_slice_id="",
+    )
+    try:
+        if draft_info_path.exists():
+            with open(draft_info_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            drafts = DraftInfos.model_validate(data)
+        else:
+            drafts = DraftInfos()
+    except Exception:
+        # 若现有文件损坏或格式不符，则回退为新结构
+        drafts = DraftInfos()
+
+    # 若已存在同 UUID，更新名称与修改时间；否则追加
+    updated = False
+    for d in drafts.draftInfos:
+        if d.id == draft_id:
+            d.name = name
+            d.modifyTime = entry.modifyTime
+            updated = True
+            break
+    if not updated:
+        drafts.draftInfos.append(entry)
+
+    with open(draft_info_path, "w", encoding="utf-8") as f:
+        f.write(json.dumps(drafts.model_dump(), ensure_ascii=False, indent=2))
+
+    return {
+        "draft_id": draft_id,
+        "folder": str(folder),
+        "bjson": str(bjson_path),
+    }
+
+
 __all__ = [
     "WorkInfo",
     "WorksInfo",
@@ -157,4 +253,5 @@ __all__ = [
     "load_works_info",
     "load_draft_info",
     "build_drafts_index",
+    "create_draft",
 ]
