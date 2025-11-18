@@ -13,7 +13,7 @@ from bcut_models import (
     shift_caption_time,
     save_bcut_project,
 )
-from bcut_drafts import build_drafts_index
+from bcut_drafts import build_drafts_index, create_draft
 
 
 def main():
@@ -25,6 +25,17 @@ def main():
 
     p_summarize = subparsers.add_parser("summarize-drafts", help="扫描并汇总 Drafts 目录信息")
     p_summarize.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+
+    p_create = subparsers.add_parser("create-draft", help="创建草稿目录与空工程")
+    p_create.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_create.add_argument("name", help="草稿名称")
+    p_create.add_argument("--width", type=int, default=1920, help="视频宽度，默认 1920")
+    p_create.add_argument("--height", type=int, default=1080, help="视频高度，默认 1080")
+    p_create.add_argument("--fps-num", type=int, default=30, help="帧率分子，默认 30")
+    p_create.add_argument("--fps-den", type=int, default=1, help="帧率分母，默认 1")
+    p_create.add_argument("--sample-rate", type=int, default=48000, help="音频采样率，默认 48000")
+    p_create.add_argument("--channel-count", type=int, default=2, help="音频声道数，默认 2")
+    p_create.add_argument("--draft-version", type=str, default="3.11.8", help="草稿创建版本，默认 3.11.8")
 
     # 字幕操作子命令
     p_add = subparsers.add_parser("add-caption", help="在指定字幕轨添加字幕")
@@ -82,6 +93,23 @@ def main():
             print(json.dumps(index, ensure_ascii=False, indent=2))
         except Exception as e:
             print(f"汇总失败: {e}")
+            sys.exit(1)
+    elif args.command == "create-draft":
+        try:
+            result = create_draft(
+                base_dir=args.dir,
+                name=args.name,
+                width=args.width,
+                height=args.height,
+                fps_num=args.fps_num,
+                fps_den=args.fps_den,
+                sample_rate=args.sample_rate,
+                channel_count=args.channel_count,
+                draft_version=args.draft_version,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"创建失败: {e}")
             sys.exit(1)
     elif args.command == "add-caption":
         file_path = Path(args.file)
@@ -147,7 +175,7 @@ def main():
             print(f"平移失败: {e}")
             sys.exit(1)
     else:
-        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""")
+        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""\n  创建草稿: uv run main.py create-draft ""Bcut Drafts"" ""测试草稿"" [--width 1920 --height 1080 --fps-num 30 --fps-den 1 --sample-rate 48000 --channel-count 2 --draft-version 3.11.8]")
         sys.exit(1)
 
 

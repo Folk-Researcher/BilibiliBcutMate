@@ -266,13 +266,32 @@ def create_empty_project(
     timeline = Timeline(
         adjustTracks=[],
         audioTracks=[],
-        captionTracks=[],
+        captionTracks=[
+            CaptionTrack(
+                captions=[],
+                idString=str(uuid4()),
+                index=0,
+                trackType=3,
+                compacted=False,
+            )
+        ],
         config=config,
         filterTracks=[],
         idString=str(uuid4()),
         stickerTracks=[],
         timelineVideoFxTracks=[],
-        videoTracks=[],
+        videoTracks=[
+            VideoTrack(
+                clips=[],
+                idString=str(uuid4()),
+                index=0,
+                mute=False,
+                split=False,
+                trackType=1,
+                transitions=[],
+                **{"compacted": False},
+            )
+        ],
     )
     widget = TimelineWidget(
         linkage=True,
