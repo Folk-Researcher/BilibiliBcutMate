@@ -73,8 +73,8 @@ def build_drafts_index(base_dir: str | Path) -> List[Dict[str, Any]]:
     - folder_id: 草稿子目录名（通常为 UUID）。
     - cover: 子目录中的封面路径（`cover.jpg`），若不存在则为 `None`。
     - bjson_files: 该目录内的 `.bjson` 文件列表（字符串路径，按文件名排序）。
-    - works: 关联的作品信息（根据 `draftId` 关联）。
-    - draft: 关联的草稿元数据（根据 `id` 关联），若缺失则为 `None`。
+    - works: 关联的“本地作品”列表（来源于 `worksInfo.json`，按 `draftId` 关联）。
+    - draft: 关联的草稿元数据（来源于 `draftInfo.json`，按 `id` 关联），若缺失则为 `None`。
 
     说明：同一草稿目录内可能包含多个 `.bjson` 快照，实践中“最新文件通常为当前有效，较早者为备份/历史版本”。
     判定最新可参考文件名时间戳与 mtime（文件修改时间）。

@@ -47,10 +47,10 @@ def main():
     p_create.add_argument("--channel-count", type=int, default=2, help="音频声道数，默认 2")
     p_create.add_argument("--draft-version", type=str, default="3.11.8", help="草稿创建版本，默认 3.11.8")
 
-    p_wl = subparsers.add_parser("works-list", help="列出 worksInfo.json 中的作品条目")
+    p_wl = subparsers.add_parser("works-list", help="列出“本地作品”（来源 worksInfo.json）")
     p_wl.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
 
-    p_wa = subparsers.add_parser("works-add", help="新增作品条目")
+    p_wa = subparsers.add_parser("works-add", help="新增“本地作品”条目")
     p_wa.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
     p_wa.add_argument("--draft-id", required=True)
     p_wa.add_argument("--name", required=True)
@@ -59,7 +59,7 @@ def main():
     p_wa.add_argument("--image-ratio", type=float, default=1.7777778)
     p_wa.add_argument("--status", type=int, default=0)
 
-    p_wu = subparsers.add_parser("works-update", help="更新作品条目")
+    p_wu = subparsers.add_parser("works-update", help="更新“本地作品”条目")
     p_wu.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
     p_wu.add_argument("--id", required=True)
     p_wu.add_argument("--name")
@@ -68,11 +68,11 @@ def main():
     p_wu.add_argument("--image-ratio", type=float)
     p_wu.add_argument("--status", type=int)
 
-    p_wr = subparsers.add_parser("works-remove", help="删除作品条目")
+    p_wr = subparsers.add_parser("works-remove", help="删除“本地作品”条目")
     p_wr.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
     p_wr.add_argument("--id", required=True)
 
-    p_wf = subparsers.add_parser("works-find", help="查询作品条目")
+    p_wf = subparsers.add_parser("works-find", help="查询“本地作品”条目")
     p_wf.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
     g = p_wf.add_mutually_exclusive_group(required=True)
     g.add_argument("--id")
@@ -289,7 +289,7 @@ def main():
             print(f"查询失败: {e}")
             sys.exit(1)
     else:
-        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""\n  创建草稿: uv run main.py create-draft ""Bcut Drafts"" ""测试草稿"" [--width 1920 --height 1080 --fps-num 30 --fps-den 1 --sample-rate 48000 --channel-count 2 --draft-version 3.11.8]\n  列出作品: uv run main.py works-list ""Bcut Drafts""\n  新增作品: uv run main.py works-add ""Bcut Drafts"" --draft-id <UUID> --name <NAME> [--duration N --file-path P --image-ratio R --status S]\n  更新作品: uv run main.py works-update ""Bcut Drafts"" --id <UUID> [--name --duration --file-path --image-ratio --status]\n  删除作品: uv run main.py works-remove ""Bcut Drafts"" --id <UUID>\n  查询作品: uv run main.py works-find ""Bcut Drafts"" (--id <UUID> | --draft-id <UUID>)")
+        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""\n  创建草稿: uv run main.py create-draft ""Bcut Drafts"" ""测试草稿"" [--width 1920 --height 1080 --fps-num 30 --fps-den 1 --sample-rate 48000 --channel-count 2 --draft-version 3.11.8]\n  列出本地作品: uv run main.py works-list ""Bcut Drafts""\n  新增本地作品: uv run main.py works-add ""Bcut Drafts"" --draft-id <UUID> --name <NAME> [--duration N --file-path P --image-ratio R --status S]\n  更新本地作品: uv run main.py works-update ""Bcut Drafts"" --id <UUID> [--name --duration --file-path --image-ratio --status]\n  删除本地作品: uv run main.py works-remove ""Bcut Drafts"" --id <UUID>\n  查询本地作品: uv run main.py works-find ""Bcut Drafts"" (--id <UUID> | --draft-id <UUID>)")
         sys.exit(1)
 
 
