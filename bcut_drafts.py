@@ -5,42 +5,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 from uuid import uuid4
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from pydantic import BaseModel, Field
 from bcut_models import BcutProject, create_empty_project, save_bcut_project
+from bcut.models.works import WorkInfo, WorksInfo
+from bcut.services.works_repo import load_works_info
 
 
-class WorkInfo(BaseModel):
-    """作品（导出项）元信息。
-
-    典型来源：`worksInfo.json` 中的单个条目。
-
-    字段说明（常见）：
-    - draftId: 关联的草稿 UUID。
-    - duration: 作品时长（毫秒）。
-    - filePath: 导出的目标文件路径（可能为空）。
-    - id: 作品条目的唯一标识。
-    - imageRatio: 预览图比例或画幅比（浮点）。
-    - modifyTime: 最近修改时间戳（毫秒）。
-    - name: 作品名称。
-    - status: 整数状态码（不同版本含义可能不同）。
-    """
-    draftId: str
-    duration: int
-    filePath: str
-    id: str
-    imageRatio: float
-    modifyTime: int
-    name: str
-    status: int
-
-
-class WorksInfo(BaseModel):
-    """`worksInfo.json` 顶层结构封装。
-
-    - worksInfos: 作品条目列表。
-    """
-    worksInfos: List[WorkInfo] = Field(default_factory=list)
+ 
 
 
 class DraftInfoEntry(BaseModel):
@@ -74,18 +49,7 @@ class DraftInfos(BaseModel):
     draftInfos: List[DraftInfoEntry] = Field(default_factory=list)
 
 
-def load_works_info(path: str | Path) -> WorksInfo:
-    """加载并解析 `worksInfo.json`。
-
-    参数：
-    - path: 文件路径（`str` 或 `Path`）。
-
-    返回：
-    - WorksInfo: 解析后的 Pydantic 对象。
-    """
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return WorksInfo.model_validate(data)
+ 
 
 
 def load_draft_info(path: str | Path) -> DraftInfos:

@@ -3,6 +3,8 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
 from bcut_models import (
     load_bcut_project,
     summarize_project,
@@ -14,6 +16,14 @@ from bcut_models import (
     save_bcut_project,
 )
 from bcut_drafts import build_drafts_index, create_draft
+from bcut.services.works_repo import (
+    load_works_info,
+    add_work,
+    update_work,
+    remove_work,
+    find_by_id,
+    find_by_draft,
+)
 
 
 def main():
@@ -36,6 +46,37 @@ def main():
     p_create.add_argument("--sample-rate", type=int, default=48000, help="音频采样率，默认 48000")
     p_create.add_argument("--channel-count", type=int, default=2, help="音频声道数，默认 2")
     p_create.add_argument("--draft-version", type=str, default="3.11.8", help="草稿创建版本，默认 3.11.8")
+
+    p_wl = subparsers.add_parser("works-list", help="列出 worksInfo.json 中的作品条目")
+    p_wl.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+
+    p_wa = subparsers.add_parser("works-add", help="新增作品条目")
+    p_wa.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_wa.add_argument("--draft-id", required=True)
+    p_wa.add_argument("--name", required=True)
+    p_wa.add_argument("--duration", type=int, default=0)
+    p_wa.add_argument("--file-path", default="")
+    p_wa.add_argument("--image-ratio", type=float, default=1.7777778)
+    p_wa.add_argument("--status", type=int, default=0)
+
+    p_wu = subparsers.add_parser("works-update", help="更新作品条目")
+    p_wu.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_wu.add_argument("--id", required=True)
+    p_wu.add_argument("--name")
+    p_wu.add_argument("--duration", type=int)
+    p_wu.add_argument("--file-path")
+    p_wu.add_argument("--image-ratio", type=float)
+    p_wu.add_argument("--status", type=int)
+
+    p_wr = subparsers.add_parser("works-remove", help="删除作品条目")
+    p_wr.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_wr.add_argument("--id", required=True)
+
+    p_wf = subparsers.add_parser("works-find", help="查询作品条目")
+    p_wf.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    g = p_wf.add_mutually_exclusive_group(required=True)
+    g.add_argument("--id")
+    g.add_argument("--draft-id")
 
     # 字幕操作子命令
     p_add = subparsers.add_parser("add-caption", help="在指定字幕轨添加字幕")
@@ -174,8 +215,81 @@ def main():
         except Exception as e:
             print(f"平移失败: {e}")
             sys.exit(1)
+    elif args.command == "works-list":
+        works_path = Path(args.dir) / "worksInfo.json"
+        try:
+            info = load_works_info(works_path)
+            items = [
+                {
+                    "id": w.id,
+                    "draftId": w.draftId,
+                    "name": w.name,
+                    "status": w.status,
+                    "modifyTime": w.modifyTime,
+                }
+                for w in info.worksInfos
+            ]
+            print(json.dumps(items, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"列出失败: {e}")
+            sys.exit(1)
+    elif args.command == "works-add":
+        works_path = Path(args.dir) / "worksInfo.json"
+        try:
+            w = add_work(
+                works_path,
+                draftId=args.draft_id,
+                name=args.name,
+                duration=args.duration,
+                filePath=args.file_path,
+                imageRatio=args.image_ratio,
+                status=args.status,
+            )
+            print(json.dumps(w.model_dump(), ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"新增失败: {e}")
+            sys.exit(1)
+    elif args.command == "works-update":
+        works_path = Path(args.dir) / "worksInfo.json"
+        try:
+            fields = {}
+            if args.name is not None:
+                fields["name"] = args.name
+            if args.duration is not None:
+                fields["duration"] = args.duration
+            if args.file_path is not None:
+                fields["filePath"] = args.file_path
+            if args.image_ratio is not None:
+                fields["imageRatio"] = args.image_ratio
+            if args.status is not None:
+                fields["status"] = args.status
+            w = update_work(works_path, args.id, **fields)
+            print(json.dumps(w.model_dump() if w else None, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"更新失败: {e}")
+            sys.exit(1)
+    elif args.command == "works-remove":
+        works_path = Path(args.dir) / "worksInfo.json"
+        try:
+            ok = remove_work(works_path, args.id)
+            print(json.dumps({"removed": ok}, ensure_ascii=False))
+        except Exception as e:
+            print(f"删除失败: {e}")
+            sys.exit(1)
+    elif args.command == "works-find":
+        works_path = Path(args.dir) / "worksInfo.json"
+        try:
+            if args.id:
+                w = find_by_id(works_path, args.id)
+                print(json.dumps(w.model_dump() if w else None, ensure_ascii=False, indent=2))
+            else:
+                arr = [w.model_dump() for w in find_by_draft(works_path, args.draft_id)]
+                print(json.dumps(arr, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"查询失败: {e}")
+            sys.exit(1)
     else:
-        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""\n  创建草稿: uv run main.py create-draft ""Bcut Drafts"" ""测试草稿"" [--width 1920 --height 1080 --fps-num 30 --fps-den 1 --sample-rate 48000 --channel-count 2 --draft-version 3.11.8]")
+        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""\n  创建草稿: uv run main.py create-draft ""Bcut Drafts"" ""测试草稿"" [--width 1920 --height 1080 --fps-num 30 --fps-den 1 --sample-rate 48000 --channel-count 2 --draft-version 3.11.8]\n  列出作品: uv run main.py works-list ""Bcut Drafts""\n  新增作品: uv run main.py works-add ""Bcut Drafts"" --draft-id <UUID> --name <NAME> [--duration N --file-path P --image-ratio R --status S]\n  更新作品: uv run main.py works-update ""Bcut Drafts"" --id <UUID> [--name --duration --file-path --image-ratio --status]\n  删除作品: uv run main.py works-remove ""Bcut Drafts"" --id <UUID>\n  查询作品: uv run main.py works-find ""Bcut Drafts"" (--id <UUID> | --draft-id <UUID>)")
         sys.exit(1)
 
 
