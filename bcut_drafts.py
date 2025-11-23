@@ -12,58 +12,13 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from pydantic import BaseModel, Field
 from bcut_models import BcutProject, create_empty_project, save_bcut_project
 from bcut.models.works import WorkInfo, WorksInfo
+from bcut.models.drafts import DraftInfoEntry, DraftInfos
 from bcut.services.works_repo import load_works_info
+from bcut.services.draft_repo import load_draft_info, add_draft, save_draft_info
 
 
  
 
-
-class DraftInfoEntry(BaseModel):
-    """草稿（Draft）元信息条目。
-
-    典型来源：`draftInfo.json` 中的单个条目。
-
-    字段说明（常见）：
-    - id: 草稿的唯一标识（UUID）。
-    - name: 草稿名称。
-    - modifyTime: 最近修改时间戳（毫秒）。
-    - duration: 草稿时长（毫秒）。
-    - cloud_draft_id/cloud_draft_version: 云草稿相关标识（可能为空）。
-    - storyLineId/video_slice_id: 版本相关的拓展字段（可能为空）。
-    """
-    cloud_draft_id: Optional[str] = ""
-    cloud_draft_version: Optional[str] = ""
-    duration: int
-    id: str
-    modifyTime: int
-    name: str
-    storyLineId: Optional[str] = ""
-    video_slice_id: Optional[str] = ""
-
-
-class DraftInfos(BaseModel):
-    """`draftInfo.json` 顶层结构封装。
-
-    - draftInfos: 草稿条目列表。
-    """
-    draftInfos: List[DraftInfoEntry] = Field(default_factory=list)
-
-
- 
-
-
-def load_draft_info(path: str | Path) -> DraftInfos:
-    """加载并解析 `draftInfo.json`。
-
-    参数：
-    - path: 文件路径（`str` 或 `Path`）。
-
-    返回：
-    - DraftInfos: 解析后的 Pydantic 对象。
-    """
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return DraftInfos.model_validate(data)
 
 
 def build_drafts_index(base_dir: str | Path) -> List[Dict[str, Any]]:
@@ -167,40 +122,25 @@ def create_draft(
 
     # 更新/创建 draftInfo.json
     draft_info_path = base / "draftInfo.json"
-    entry = DraftInfoEntry(
-        cloud_draft_id="",
-        cloud_draft_version="",
-        duration=0,
-        id=draft_id,
-        modifyTime=int(now.timestamp() * 1000),
-        name=name,
-        storyLineId="",
-        video_slice_id="",
-    )
     try:
         if draft_info_path.exists():
-            with open(draft_info_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            drafts = DraftInfos.model_validate(data)
+            drafts = load_draft_info(draft_info_path)
         else:
             drafts = DraftInfos()
     except Exception:
-        # 若现有文件损坏或格式不符，则回退为新结构
         drafts = DraftInfos()
 
-    # 若已存在同 UUID，更新名称与修改时间；否则追加
-    updated = False
-    for d in drafts.draftInfos:
-        if d.id == draft_id:
-            d.name = name
-            d.modifyTime = entry.modifyTime
-            updated = True
-            break
-    if not updated:
-        drafts.draftInfos.append(entry)
-
-    with open(draft_info_path, "w", encoding="utf-8") as f:
-        f.write(json.dumps(drafts.model_dump(), ensure_ascii=False, indent=2))
+    add_draft(
+        draft_info_path,
+        id=draft_id,
+        name=name,
+        duration=0,
+        modifyTime=int(now.timestamp() * 1000),
+        cloud_draft_id="",
+        cloud_draft_version="",
+        storyLineId="",
+        video_slice_id="",
+    )
 
     return {
         "draft_id": draft_id,
