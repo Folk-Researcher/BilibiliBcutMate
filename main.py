@@ -24,6 +24,13 @@ from bcut.services.works_repo import (
     find_by_id,
     find_by_draft,
 )
+from bcut.services.draft_repo import (
+    load_draft_info as load_draft_info_repo,
+    add_draft as add_draft_repo,
+    update_draft as update_draft_repo,
+    remove_draft as remove_draft_repo,
+    find_by_id as find_draft_by_id_repo,
+)
 
 
 def main():
@@ -77,6 +84,38 @@ def main():
     g = p_wf.add_mutually_exclusive_group(required=True)
     g.add_argument("--id")
     g.add_argument("--draft-id")
+
+    # 草稿元信息操作子命令（draftInfo.json）
+    p_dl = subparsers.add_parser("drafts-list", help="列出草稿元信息（来源 draftInfo.json）")
+    p_dl.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+
+    p_da = subparsers.add_parser("drafts-add", help="新增/覆盖草稿元信息条目")
+    p_da.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_da.add_argument("--id", required=True)
+    p_da.add_argument("--name", required=True)
+    p_da.add_argument("--duration", type=int, default=0)
+    p_da.add_argument("--cloud-draft-id", default="")
+    p_da.add_argument("--cloud-draft-version", default="")
+    p_da.add_argument("--storyLineId", default="")
+    p_da.add_argument("--video_slice_id", default="")
+
+    p_du = subparsers.add_parser("drafts-update", help="更新草稿元信息条目")
+    p_du.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_du.add_argument("--id", required=True)
+    p_du.add_argument("--name")
+    p_du.add_argument("--duration", type=int)
+    p_du.add_argument("--cloud-draft-id")
+    p_du.add_argument("--cloud-draft-version")
+    p_du.add_argument("--storyLineId")
+    p_du.add_argument("--video_slice_id")
+
+    p_dr = subparsers.add_parser("drafts-remove", help="删除草稿元信息条目")
+    p_dr.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_dr.add_argument("--id", required=True)
+
+    p_df = subparsers.add_parser("drafts-find", help="查询草稿元信息条目（按 id）")
+    p_df.add_argument("dir", help="Path to the 'Bcut Drafts' directory")
+    p_df.add_argument("--id", required=True)
 
     # 字幕操作子命令
     p_add = subparsers.add_parser("add-caption", help="在指定字幕轨添加字幕")
@@ -288,8 +327,79 @@ def main():
         except Exception as e:
             print(f"查询失败: {e}")
             sys.exit(1)
+    elif args.command == "drafts-list":
+        draft_path = Path(args.dir) / "draftInfo.json"
+        try:
+            info = load_draft_info_repo(draft_path)
+            items = [
+                {
+                    "id": d.id,
+                    "name": d.name,
+                    "modifyTime": d.modifyTime,
+                    "duration": d.duration,
+                }
+                for d in info.draftInfos
+            ]
+            print(json.dumps(items, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"列出失败: {e}")
+            sys.exit(1)
+    elif args.command == "drafts-add":
+        draft_path = Path(args.dir) / "draftInfo.json"
+        try:
+            d = add_draft_repo(
+                draft_path,
+                id=args.id,
+                name=args.name,
+                duration=args.duration,
+                cloud_draft_id=args.cloud_draft_id,
+                cloud_draft_version=args.cloud_draft_version,
+                storyLineId=args.storyLineId,
+                video_slice_id=args.video_slice_id,
+            )
+            print(json.dumps(d.model_dump(), ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"新增失败: {e}")
+            sys.exit(1)
+    elif args.command == "drafts-update":
+        draft_path = Path(args.dir) / "draftInfo.json"
+        try:
+            fields = {}
+            if args.name is not None:
+                fields["name"] = args.name
+            if args.duration is not None:
+                fields["duration"] = args.duration
+            if args.cloud_draft_id is not None:
+                fields["cloud_draft_id"] = args.cloud_draft_id
+            if args.cloud_draft_version is not None:
+                fields["cloud_draft_version"] = args.cloud_draft_version
+            if args.storyLineId is not None:
+                fields["storyLineId"] = args.storyLineId
+            if args.video_slice_id is not None:
+                fields["video_slice_id"] = args.video_slice_id
+            d = update_draft_repo(draft_path, args.id, **fields)
+            print(json.dumps(d.model_dump() if d else None, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"更新失败: {e}")
+            sys.exit(1)
+    elif args.command == "drafts-remove":
+        draft_path = Path(args.dir) / "draftInfo.json"
+        try:
+            ok = remove_draft_repo(draft_path, args.id)
+            print(json.dumps({"removed": ok}, ensure_ascii=False))
+        except Exception as e:
+            print(f"删除失败: {e}")
+            sys.exit(1)
+    elif args.command == "drafts-find":
+        draft_path = Path(args.dir) / "draftInfo.json"
+        try:
+            d = find_draft_by_id_repo(draft_path, args.id)
+            print(json.dumps(d.model_dump() if d else None, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print(f"查询失败: {e}")
+            sys.exit(1)
     else:
-        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""\n  创建草稿: uv run main.py create-draft ""Bcut Drafts"" ""测试草稿"" [--width 1920 --height 1080 --fps-num 30 --fps-den 1 --sample-rate 48000 --channel-count 2 --draft-version 3.11.8]\n  列出本地作品: uv run main.py works-list ""Bcut Drafts""\n  新增本地作品: uv run main.py works-add ""Bcut Drafts"" --draft-id <UUID> --name <NAME> [--duration N --file-path P --image-ratio R --status S]\n  更新本地作品: uv run main.py works-update ""Bcut Drafts"" --id <UUID> [--name --duration --file-path --image-ratio --status]\n  删除本地作品: uv run main.py works-remove ""Bcut Drafts"" --id <UUID>\n  查询本地作品: uv run main.py works-find ""Bcut Drafts"" (--id <UUID> | --draft-id <UUID>)")
+        print("请选择命令：\n  解析单个草稿: uv run main.py parse <path/to/file.bjson>\n  汇总 Drafts 目录: uv run main.py summarize-drafts ""Bcut Drafts""\n  创建草稿: uv run main.py create-draft ""Bcut Drafts"" ""测试草稿"" [--width 1920 --height 1080 --fps-num 30 --fps-den 1 --sample-rate 48000 --channel-count 2 --draft-version 3.11.8]\n  列出本地作品: uv run main.py works-list ""Bcut Drafts""\n  新增本地作品: uv run main.py works-add ""Bcut Drafts"" --draft-id <UUID> --name <NAME> [--duration N --file-path P --image-ratio R --status S]\n  更新本地作品: uv run main.py works-update ""Bcut Drafts"" --id <UUID> [--name --duration --file-path --image-ratio --status]\n  删除本地作品: uv run main.py works-remove ""Bcut Drafts"" --id <UUID>\n  查询本地作品: uv run main.py works-find ""Bcut Drafts"" (--id <UUID> | --draft-id <UUID>)\n  列出草稿: uv run main.py drafts-list ""Bcut Drafts""\n  新增草稿元信息: uv run main.py drafts-add ""Bcut Drafts"" --id <UUID> --name <NAME> [--duration N --cloud-draft-id C --cloud-draft-version V --storyLineId S --video_slice_id VS]\n  更新草稿元信息: uv run main.py drafts-update ""Bcut Drafts"" --id <UUID> [--name --duration --cloud-draft-id --cloud-draft-version --storyLineId --video_slice_id]\n  删除草稿元信息: uv run main.py drafts-remove ""Bcut Drafts"" --id <UUID>\n  查询草稿元信息: uv run main.py drafts-find ""Bcut Drafts"" --id <UUID>")
         sys.exit(1)
 
 
