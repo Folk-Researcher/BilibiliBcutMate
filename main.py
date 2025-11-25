@@ -15,7 +15,7 @@ from bcut_models import (
     shift_caption_time,
     save_bcut_project,
 )
-from bcut_drafts import build_drafts_index, create_draft
+from bcut.services.draft_repo import build_drafts_index, create_draft
 from bcut.services.works_repo import (
     load_works_info,
     add_work,

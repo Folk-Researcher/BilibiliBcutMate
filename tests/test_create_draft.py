@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from bcut_drafts import create_draft, build_drafts_index
+from bcut.services.draft_repo import create_draft, build_drafts_index
 
 
 class TestCreateDraft(unittest.TestCase):

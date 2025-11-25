@@ -5,6 +5,12 @@ from pathlib import Path
 from time import time
 
 from bcut.models.drafts import DraftInfoEntry, DraftInfos
+from bcut.models.works import WorkInfo, WorksInfo
+from bcut.services.works_repo import load_works_info
+from bcut_models import BcutProject, create_empty_project, save_bcut_project
+from typing import Any, Dict, List
+from datetime import datetime
+from uuid import uuid4
 
 
 def _now_ms() -> int:
@@ -102,4 +108,104 @@ __all__ = [
     "update_draft",
     "remove_draft",
     "find_by_id",
+    "build_drafts_index",
+    "create_draft",
 ]
+
+
+def build_drafts_index(base_dir: str | Path) -> List[Dict[str, Any]]:
+    base_dir = Path(base_dir)
+    works_path = base_dir / "worksInfo.json"
+    draft_path = base_dir / "draftInfo.json"
+
+    works = load_works_info(works_path) if works_path.exists() else WorksInfo()
+    drafts = load_draft_info(draft_path) if draft_path.exists() else DraftInfos()
+
+    works_by_draft_id: Dict[str, List[WorkInfo]] = {}
+    for w in works.worksInfos:
+        works_by_draft_id.setdefault(w.draftId, []).append(w)
+
+    draft_by_id: Dict[str, DraftInfoEntry] = {d.id: d for d in drafts.draftInfos}
+
+    summaries: List[Dict[str, Any]] = []
+    for child in base_dir.iterdir():
+        if not child.is_dir():
+            continue
+        folder_id = child.name
+
+        bjson_files = sorted([str(p) for p in child.glob("*.bjson")])
+        cover_path = str(child / "cover.jpg") if (child / "cover.jpg").exists() else None
+
+        summaries.append({
+            "folder_id": folder_id,
+            "cover": cover_path,
+            "bjson_files": bjson_files,
+            "works": [w.model_dump() for w in works_by_draft_id.get(folder_id, [])],
+            "draft": draft_by_id.get(folder_id).model_dump() if folder_id in draft_by_id else None,
+        })
+
+    return summaries
+
+
+def create_draft(
+    base_dir: str | Path,
+    name: str,
+    width: int = 1920,
+    height: int = 1080,
+    fps_num: int = 30,
+    fps_den: int = 1,
+    sample_rate: int = 48000,
+    channel_count: int = 2,
+    draft_version: str = "3.11.8",
+) -> Dict[str, Any]:
+    base = Path(base_dir)
+    base.mkdir(parents=True, exist_ok=True)
+
+    draft_id = str(uuid4()).upper()
+    folder = base / draft_id
+    folder.mkdir(parents=True, exist_ok=True)
+
+    project: BcutProject = create_empty_project(
+        width=width,
+        height=height,
+        fps_num=fps_num,
+        fps_den=fps_den,
+        sample_rate=sample_rate,
+        channel_count=channel_count,
+        draft_version=draft_version,
+    )
+
+    now = datetime.now()
+    ms = int(now.microsecond / 1000)
+    file_guid = uuid4()
+    filename = f"{now:%H}-{now:%M}-{now:%S}-{ms:03d}--{{{file_guid}}}.bjson"
+    bjson_path = folder / filename
+
+    save_bcut_project(project, bjson_path)
+
+    draft_info_path = base / "draftInfo.json"
+    try:
+        if draft_info_path.exists():
+            drafts = load_draft_info(draft_info_path)
+        else:
+            drafts = DraftInfos()
+    except Exception:
+        drafts = DraftInfos()
+
+    add_draft(
+        draft_info_path,
+        id=draft_id,
+        name=name,
+        duration=0,
+        modifyTime=int(now.timestamp() * 1000),
+        cloud_draft_id="",
+        cloud_draft_version="",
+        storyLineId="",
+        video_slice_id="",
+    )
+
+    return {
+        "draft_id": draft_id,
+        "folder": str(folder),
+        "bjson": str(bjson_path),
+    }
